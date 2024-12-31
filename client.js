@@ -127,16 +127,32 @@ function handleSignalingData(data) {
 }
 
 function setupDataChannel() {
+    dataChannel.onopen = () => {
+        console.log('Data channel is open');
+        enableGameButtons(true); // Enable game buttons
+    };
+
+    dataChannel.onclose = () => {
+        console.log('Data channel is closed');
+        enableGameButtons(false); // Disable game buttons
+    };
+
     dataChannel.onmessage = (event) => {
         const move = event.data;
         processRemoteMove(move);
     };
 }
 
+
 function sendMove(move) {
-    dataChannel.send(move);
-    processLocalMove(move);
+    if (dataChannel.readyState === 'open') {
+        dataChannel.send(move);
+        processLocalMove(move);
+    } else {
+        console.error('Data channel is not open. Current state:', dataChannel.readyState);
+    }
 }
+
 
 function processLocalMove(move) {
     status.textContent = `You played: ${move}`;
