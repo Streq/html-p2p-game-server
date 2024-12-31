@@ -59,12 +59,14 @@ wss.on('connection', (ws) => {
                     rooms[roomId].host.send(JSON.stringify({ type: 'player_joined' }));
                     ws.send(JSON.stringify({ type: 'room_joined', roomId }));
             
-                    // Relay WebRTC signaling data
+                    // Host sends the offer
                     rooms[roomId].host.on('message', (msg) => {
-                        ws.send(msg.toString()); // Ensure the message is a string
+                        rooms[roomId].guest.send(msg.toString());
                     });
+            
+                    // Guest sends the answer
                     ws.on('message', (msg) => {
-                        rooms[roomId].host.send(msg.toString()); // Ensure the message is a string
+                        rooms[roomId].host.send(msg.toString());
                     });
                 } else {
                     ws.send(JSON.stringify({ type: 'error', message: 'Room full or does not exist' }));

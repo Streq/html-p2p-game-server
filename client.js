@@ -92,20 +92,37 @@ function startGame() {
             localConnection.setLocalDescription(offer);
             socket.send(JSON.stringify({ type: 'offer', offer }));
         });
+    
+
+    localConnection.onconnectionstatechange = () => {
+        console.log('Connection state:', localConnection.connectionState);
+    };
+    localConnection.onsignalingstatechange = () => {
+        console.log('Signaling state:', localConnection.signalingState);
+    };
 }
 
 function handleSignalingData(data) {
     if (data.offer) {
-        localConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
-        localConnection.createAnswer()
-            .then((answer) => {
-                localConnection.setLocalDescription(answer);
-                socket.send(JSON.stringify({ type: 'answer', answer }));
-            });
+        // Only the guest sets the remote offer and creates an answer
+        if (!localConnection.localDescription) {
+            localConnection.setRemoteDescription(new RTCSessionDescription(data.offer))
+                .then(() => localConnection.createAnswer())
+                .then((answer) => localConnection.setLocalDescription(answer))
+                .then(() => {
+                    socket.send(JSON.stringify({ type: 'answer', answer: localConnection.localDescription }));
+                })
+                .catch((err) => console.error('Error handling offer:', err));
+        }
     } else if (data.answer) {
-        localConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+        // Only the host sets the remote answer
+        if (localConnection.localDescription && localConnection.signalingState === 'have-local-offer') {
+            localConnection.setRemoteDescription(new RTCSessionDescription(data.answer))
+                .catch((err) => console.error('Error setting remote answer:', err));
+        }
     } else if (data.candidate) {
-        localConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+        localConnection.addIceCandidate(new RTCIceCandidate(data.candidate))
+            .catch((err) => console.error('Error adding ICE candidate:', err));
     }
 }
 
