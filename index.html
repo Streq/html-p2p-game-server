@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rock-Paper-Scissors</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+        #game {
+            display: none;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="lobby">
+        <h1>Rock-Paper-Scissors Lobby</h1>
+        <input id="roomId" type="text" placeholder="Enter Room ID">
+        <button id="createRoom">Create Room</button>
+        <button id="joinRoom">Join Room</button>
+        <p id="status"></p>
+    </div>
+
+    <div id="game">
+        <h1>Rock-Paper-Scissors</h1>
+        <p id="score">Your Score: 0 | Opponent Score: 0</p>
+        <button class="move" data-move="rock">Rock</button>
+        <button class="move" data-move="paper">Paper</button>
+        <button class="move" data-move="scissors">Scissors</button>
+        <p id="status">Waiting for your move...</p>
+    </div>
+
+    <script src="client.js"></script>
+</body>
+</html>
