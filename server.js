@@ -59,12 +59,10 @@ wss.on('connection', (ws) => {
                     rooms[roomId].host.send(JSON.stringify({ type: 'player_joined' }));
                     ws.send(JSON.stringify({ type: 'room_joined', roomId }));
             
-                    // Host sends the offer
+                    // Relay messages for signaling
                     rooms[roomId].host.on('message', (msg) => {
                         rooms[roomId].guest.send(msg.toString());
                     });
-            
-                    // Guest sends the answer
                     ws.on('message', (msg) => {
                         rooms[roomId].host.send(msg.toString());
                     });
@@ -72,7 +70,7 @@ wss.on('connection', (ws) => {
                     ws.send(JSON.stringify({ type: 'error', message: 'Room full or does not exist' }));
                 }
                 break;
-            }
+            }            
         }
     });
 

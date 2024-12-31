@@ -104,27 +104,24 @@ function startGame() {
 
 function handleSignalingData(data) {
     if (data.offer) {
-        // Only the guest sets the remote offer and creates an answer
-        if (!localConnection.localDescription) {
-            localConnection.setRemoteDescription(new RTCSessionDescription(data.offer))
-                .then(() => localConnection.createAnswer())
-                .then((answer) => localConnection.setLocalDescription(answer))
-                .then(() => {
-                    socket.send(JSON.stringify({ type: 'answer', answer: localConnection.localDescription }));
-                })
-                .catch((err) => console.error('Error handling offer:', err));
-        }
+        localConnection.setRemoteDescription(new RTCSessionDescription(data.offer))
+            .then(() => localConnection.createAnswer())
+            .then((answer) => {
+                return localConnection.setLocalDescription(answer);
+            })
+            .then(() => {
+                socket.send(JSON.stringify({ type: 'answer', answer: localConnection.localDescription }));
+            })
+            .catch((err) => console.error('Error handling offer:', err));
     } else if (data.answer) {
-        // Only the host sets the remote answer
-        if (localConnection.localDescription && localConnection.signalingState === 'have-local-offer') {
-            localConnection.setRemoteDescription(new RTCSessionDescription(data.answer))
-                .catch((err) => console.error('Error setting remote answer:', err));
-        }
+        localConnection.setRemoteDescription(new RTCSessionDescription(data.answer))
+            .catch((err) => console.error('Error setting remote answer:', err));
     } else if (data.candidate) {
         localConnection.addIceCandidate(new RTCIceCandidate(data.candidate))
             .catch((err) => console.error('Error adding ICE candidate:', err));
     }
 }
+
 
 function setupDataChannel() {
     dataChannel.onopen = () => {
