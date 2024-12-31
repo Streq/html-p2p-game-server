@@ -79,7 +79,12 @@ function startGame() {
     localConnection.onicecandidate = (event) => {
         if (event.candidate) {
             socket.send(JSON.stringify({ type: 'candidate', candidate: event.candidate }));
+            console.log('Sent ICE candidate:', event.candidate);
         }
+    };
+
+    localConnection.oniceconnectionstatechange = () => {
+        console.log('ICE connection state:', localConnection.iceConnectionState);
     };
 
     localConnection.ondatachannel = (event) => {
@@ -126,17 +131,21 @@ function handleSignalingData(data) {
 function setupDataChannel() {
     dataChannel.onopen = () => {
         console.log('Data channel is open');
-        enableGameButtons(true); // Enable game buttons
+        enableGameButtons(true);
     };
-
+    
     dataChannel.onclose = () => {
         console.log('Data channel is closed');
-        enableGameButtons(false); // Disable game buttons
+        enableGameButtons(false);
     };
-
+    
+    dataChannel.onerror = (err) => {
+        console.error('Data channel error:', err);
+    };
+    
     dataChannel.onmessage = (event) => {
-        const move = event.data;
-        processRemoteMove(move);
+        console.log('Received message:', event.data);
+        processRemoteMove(event.data);
     };
 }
 
