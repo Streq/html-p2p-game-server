@@ -78,13 +78,9 @@ function startGame() {
 
     localConnection.onicecandidate = (event) => {
         if (event.candidate) {
-            socket.send(JSON.stringify({ type: 'candidate', candidate: event.candidate }));
-            console.log('Sent ICE candidate:', event.candidate);
+            socket.send(JSON.stringify({ type: "candidate", candidate: event.candidate }));
+            console.log("Sent ICE candidate:", event.candidate);
         }
-    };
-
-    localConnection.oniceconnectionstatechange = () => {
-        console.log('ICE connection state:', localConnection.iceConnectionState);
     };
 
     localConnection.ondatachannel = (event) => {
@@ -99,31 +95,43 @@ function startGame() {
         });
     
 
-    localConnection.onconnectionstatechange = () => {
-        console.log('Connection state:', localConnection.connectionState);
-    };
     localConnection.onsignalingstatechange = () => {
-        console.log('Signaling state:', localConnection.signalingState);
+        console.log("Signaling state:", localConnection.signalingState);
+    };
+    
+    localConnection.onconnectionstatechange = () => {
+        console.log("Connection state:", localConnection.connectionState);
+    };
+    
+    localConnection.oniceconnectionstatechange = () => {
+        console.log("ICE connection state:", localConnection.iceConnectionState);
     };
 }
 
 function handleSignalingData(data) {
     if (data.offer) {
-        localConnection.setRemoteDescription(new RTCSessionDescription(data.offer))
-            .then(() => localConnection.createAnswer())
-            .then((answer) => {
-                return localConnection.setLocalDescription(answer);
-            })
-            .then(() => {
-                socket.send(JSON.stringify({ type: 'answer', answer: localConnection.localDescription }));
-            })
-            .catch((err) => console.error('Error handling offer:', err));
+        if (localConnection.signalingState === "stable") {
+            localConnection.setRemoteDescription(new RTCSessionDescription(data.offer))
+                .then(() => localConnection.createAnswer())
+                .then((answer) => localConnection.setLocalDescription(answer))
+                .then(() => {
+                    socket.send(JSON.stringify({ type: "answer", answer: localConnection.localDescription }));
+                })
+                .catch((err) => console.error("Error handling offer:", err));
+        } else {
+            console.warn("Received offer in invalid state:", localConnection.signalingState);
+        }
     } else if (data.answer) {
-        localConnection.setRemoteDescription(new RTCSessionDescription(data.answer))
-            .catch((err) => console.error('Error setting remote answer:', err));
+        if (localConnection.signalingState === "have-local-offer") {
+            localConnection.setRemoteDescription(new RTCSessionDescription(data.answer))
+                .catch((err) => console.error("Error setting remote answer:", err));
+        } else {
+            console.warn("Received answer in invalid state:", localConnection.signalingState);
+        }
     } else if (data.candidate) {
         localConnection.addIceCandidate(new RTCIceCandidate(data.candidate))
-            .catch((err) => console.error('Error adding ICE candidate:', err));
+            .then(() => console.log("Added ICE candidate:", data.candidate))
+            .catch((err) => console.error("Error adding ICE candidate:", err));
     }
 }
 
