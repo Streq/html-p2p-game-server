@@ -27,6 +27,12 @@ joinBtn.addEventListener('click', () => {
     socket.send(JSON.stringify({ type: 'join_room', roomId }));
 });
 
+function enableGameButtons(enabled) {
+    moveButtons.forEach((btn) => {
+        btn.disabled = !enabled; // Disable buttons if 'enabled' is false
+    });
+}
+
 moveButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
         const move = btn.dataset.move;
