@@ -13,8 +13,11 @@ const moveButtons = document.querySelectorAll('.move');
 const status = document.getElementById('status');
 const score = document.getElementById('score');
 
+// game logic
 let localScore = 0;
 let remoteScore = 0;
+let localMove = null;
+let remoteMove = null;
 
 // Event listeners
 createBtn.addEventListener('click', () => {
@@ -175,19 +178,73 @@ function sendMove(move) {
 
 
 function processLocalMove(move) {
+    localMove = move;
     status.textContent = `You played: ${move}`;
-    checkGameEnd();
+    if (remoteMove) {
+        determineResult();
+    }
 }
 
 function processRemoteMove(move) {
+    remoteMove = move;
     status.textContent += ` | Opponent played: ${move}`;
+    if (localMove) {
+        determineResult();
+    }
+}
+
+function determineResult() {
+    // Determine the outcome
+    const outcome = getResult(localMove, remoteMove);
+
+    if (outcome === "win") {
+        localScore += 2;
+        status.textContent = `You win this round!`;
+    } else if (outcome === "lose") {
+        remoteScore += 2;
+        status.textContent = `You lose this round!`;
+    } else {
+        localScore += 1;
+        remoteScore += 1;
+        status.textContent = `It's a draw!`;
+    }
+
+    // Update the score display
+    score.textContent = `Your Score: ${localScore} | Opponent Score: ${remoteScore}`;
+
+    // Reset moves
+    localMove = null;
+    remoteMove = null;
+
+    enableGameButtons(true);
+
+    // Check for a winner
     checkGameEnd();
+}
+
+function getResult(local, remote) {
+    if (local === remote) return "draw";
+
+    if (
+        (local === "rock" && remote === "scissors") ||
+        (local === "scissors" && remote === "paper") ||
+        (local === "paper" && remote === "rock")
+    ) {
+        return "win";
+    }
+
+    return "lose";
 }
 
 function checkGameEnd() {
     if (localScore >= 10 || remoteScore >= 10) {
-        status.textContent = localScore >= 10 ? 'You win!' : 'You lose!';
-        dataChannel.close();
-        localConnection.close();
+        const winner = localScore >= 10 ? "You win!" : "You lose!";
+        status.textContent = winner;
+
+        // Disable game buttons and close the data channel
+        enableGameButtons(false);
+        if (dataChannel) dataChannel.close();
+        if (localConnection) localConnection.close();
     }
 }
+
