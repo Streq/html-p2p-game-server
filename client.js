@@ -1,6 +1,6 @@
 // client.js
 const serverUrl = `ws://${window.location.host}`;
-const socket = new WebSocket(serverUrl);
+const serverSocket = new WebSocket(serverUrl);
 let localConnection, dataChannel;
 
 // DOM elements
@@ -10,7 +10,8 @@ const roomIdInput = document.getElementById('roomId');
 const createBtn = document.getElementById('createRoom');
 const joinBtn = document.getElementById('joinRoom');
 const moveButtons = document.querySelectorAll('.move');
-const status = document.getElementById('status');
+const lobbyStatus = document.getElementById('lobbyStatus');
+const gameStatus = document.getElementById('gameStatus');
 const score = document.getElementById('score');
 
 // game logic
@@ -18,16 +19,17 @@ let localScore = 0;
 let remoteScore = 0;
 let localMove = null;
 let remoteMove = null;
+let amHost = false;
 
 // Event listeners
 createBtn.addEventListener('click', () => {
     const roomId = roomIdInput.value;
-    socket.send(JSON.stringify({ type: 'create_room', roomId }));
+    serverSocket.send(JSON.stringify({ type: 'create_room', roomId }));
 });
 
 joinBtn.addEventListener('click', () => {
     const roomId = roomIdInput.value;
-    socket.send(JSON.stringify({ type: 'join_room', roomId }));
+    serverSocket.send(JSON.stringify({ type: 'join_room', roomId }));
 });
 
 function enableGameButtons(enabled) {
@@ -44,23 +46,25 @@ moveButtons.forEach((btn) => {
 });
 
 // Socket message handler
-socket.onmessage = (event) => {
+serverSocket.onmessage = async (event) => {
     try {
         const data = JSON.parse(event.data); // Parse the incoming message as JSON
         switch (data.type) {
             case 'room_created':
-                status.textContent = `Room ${data.roomId} created. Waiting for a player to join...`;
+                lobbyStatus.textContent = `Room ${data.roomId} created. Waiting for a player to join...`;
                 break;
             case 'room_joined':
-                status.textContent = `Joined room ${data.roomId}. Starting game...`;
+                lobbyStatus.textContent = `Joined room ${data.roomId}. Starting game...`;
+                amHost = false;
                 startGame();
                 break;
             case 'player_joined':
-                status.textContent = `A player has joined your room. Starting game...`;
+                lobbyStatus.textContent = `A player has joined your room. Starting game...`;
+                amHost = true;
                 startGame();
                 break;
             case 'error':
-                status.textContent = `Error: ${data.message}`;
+                lobbyStatus.textContent = `Error: ${data.message}`;
                 break;
             default:
                 handleSignalingData(data);
@@ -70,6 +74,10 @@ socket.onmessage = (event) => {
         console.error('Invalid message received:', event.data, err);
     }
 };
+
+async function sleep(amount) {
+    await new Promise(r => setTimeout(r, amount));
+}
 
 // WebRTC setup
 function startGame() {
@@ -82,12 +90,15 @@ function startGame() {
         ]
     });
 
+    console.log("creating data channel");
     dataChannel = localConnection.createDataChannel('game');
     setupDataChannel();
 
+    console.log("data channel setup");
+
     localConnection.onicecandidate = (event) => {
         if (event.candidate) {
-            socket.send(JSON.stringify({ type: "candidate", candidate: event.candidate }));
+            serverSocket.send(JSON.stringify({ type: "candidate", candidate: event.candidate }));
             console.log("Sent ICE candidate:", event.candidate);
         }
     };
@@ -97,12 +108,14 @@ function startGame() {
         setupDataChannel();
     };
 
-    localConnection.createOffer()
-        .then((offer) => {
-            localConnection.setLocalDescription(offer);
-            socket.send(JSON.stringify({ type: 'offer', offer }));
-        });
-    
+    if (amHost){
+        localConnection.createOffer()
+            .then((offer) => {
+                console.log(`offer.type=${offer.type}`)
+                localConnection.setLocalDescription(offer);
+                serverSocket.send(JSON.stringify({ type: 'offer', offer }));
+            });
+    }
 
     localConnection.onsignalingstatechange = () => {
         console.log("Signaling state:", localConnection.signalingState);
@@ -124,7 +137,7 @@ function handleSignalingData(data) {
                 .then(() => localConnection.createAnswer())
                 .then((answer) => localConnection.setLocalDescription(answer))
                 .then(() => {
-                    socket.send(JSON.stringify({ type: "answer", answer: localConnection.localDescription }));
+                    serverSocket.send(JSON.stringify({ type: "answer", answer: localConnection.localDescription }));
                 })
                 .catch((err) => console.error("Error handling offer:", err));
         } else {
@@ -161,7 +174,7 @@ function setupDataChannel() {
     };
     
     dataChannel.onmessage = (event) => {
-        console.log('Received message:', event.data);
+        //console.log('Received message:', event.data);
         processRemoteMove(event.data);
     };
 }
@@ -179,15 +192,17 @@ function sendMove(move) {
 
 function processLocalMove(move) {
     localMove = move;
-    status.textContent = `You played: ${move}`;
+    gameStatus.textContent = `You played: ${move}`;
     if (remoteMove) {
         determineResult();
+    } else {
+        enableGameButtons(false);
     }
 }
 
 function processRemoteMove(move) {
     remoteMove = move;
-    status.textContent += ` | Opponent played: ${move}`;
+    gameStatus.textContent += ` | Opponent played`;
     if (localMove) {
         determineResult();
     }
@@ -199,14 +214,14 @@ function determineResult() {
 
     if (outcome === "win") {
         localScore += 2;
-        status.textContent = `You win this round!`;
+        gameStatus.textContent = `You win this round!`;
     } else if (outcome === "lose") {
         remoteScore += 2;
-        status.textContent = `You lose this round!`;
+        gameStatus.textContent = `You lose this round!`;
     } else {
         localScore += 1;
         remoteScore += 1;
-        status.textContent = `It's a draw!`;
+        gameStatus.textContent = `The round ended in a draw!`;
     }
 
     // Update the score display
@@ -238,8 +253,8 @@ function getResult(local, remote) {
 
 function checkGameEnd() {
     if (localScore >= 10 || remoteScore >= 10) {
-        const winner = localScore >= 10 ? "You win!" : "You lose!";
-        status.textContent = winner;
+        const winner = remoteScore == localScore ? "It's a draw!" : localScore > remoteScore ? "You win!" : "You lose!";
+        gameStatus.textContent = winner;
 
         // Disable game buttons and close the data channel
         enableGameButtons(false);

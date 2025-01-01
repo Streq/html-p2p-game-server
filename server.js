@@ -44,7 +44,9 @@ wss.on('connection', (ws) => {
                 const roomId = data.roomId;
                 if (!rooms[roomId]) {
                     rooms[roomId] = { host: ws, guest: null };
+                    console.log(`room ${roomId} created`)
                     ws.send(JSON.stringify({ type: 'room_created', roomId }));
+
                 } else {
                     ws.send(JSON.stringify({ type: 'error', message: 'Room already exists' }));
                 }
@@ -55,10 +57,10 @@ wss.on('connection', (ws) => {
                 if (rooms[roomId] && !rooms[roomId].guest) {
                     rooms[roomId].guest = ws;
             
+                    console.log(`room ${roomId} joined`)
                     // Notify both players
                     rooms[roomId].host.send(JSON.stringify({ type: 'player_joined' }));
                     ws.send(JSON.stringify({ type: 'room_joined', roomId }));
-            
                     // Relay messages for signaling
                     rooms[roomId].host.on('message', (msg) => {
                         rooms[roomId].guest.send(msg.toString());
@@ -67,7 +69,7 @@ wss.on('connection', (ws) => {
                         rooms[roomId].host.send(msg.toString());
                     });
                 } else {
-                    ws.send(JSON.stringify({ type: 'error', message: 'Room full or does not exist' }));
+                    ws.send(JSON.stringify({ type: 'error', message: `Room ${roomId} is full or does not exist` }));
                 }
                 break;
             }            
