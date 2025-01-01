@@ -107,6 +107,10 @@ function joinRoom(roomId, ws) {
 }
 
 function createRoom(roomId, ws) {
+    if(Object.keys(rooms).length >= 50){
+        ws.send(JSON.stringify({ type: 'error', message: 'Too many ongoing rooms, please try again.'}));
+        return;
+    }
     rooms[roomId] = { host: ws, guest: null };
     console.log(`room ${roomId} created`);
     ws.send(JSON.stringify({ type: 'room_created', roomId }));
