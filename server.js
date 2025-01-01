@@ -5,7 +5,7 @@ const fs = require('fs');
 
 // Serve the client files
 const server = http.createServer((req, res) => {
-    if (req.url === '/') {
+    if (req.url === '/' || req.url.startsWith("/game/")) {
         fs.readFile('index.html', (err, data) => {
             if (err) {
                 res.writeHead(500);
@@ -43,9 +43,7 @@ wss.on('connection', (ws) => {
             case 'create_room': {
                 const roomId = data.roomId;
                 if (!rooms[roomId]) {
-                    rooms[roomId] = { host: ws, guest: null };
-                    console.log(`room ${roomId} created`)
-                    ws.send(JSON.stringify({ type: 'room_created', roomId }));
+                    createRoom(roomId, ws);
 
                 } else {
                     ws.send(JSON.stringify({ type: 'error', message: 'Room already exists' }));
@@ -55,24 +53,17 @@ wss.on('connection', (ws) => {
             case 'join_room': {
                 const roomId = data.roomId;
                 if (rooms[roomId] && !rooms[roomId].guest) {
-                    rooms[roomId].guest = ws;
-            
-                    console.log(`room ${roomId} joined`)
-                    // Notify both players
-                    rooms[roomId].host.send(JSON.stringify({ type: 'player_joined' }));
-                    ws.send(JSON.stringify({ type: 'room_joined', roomId }));
-                    // Relay messages for signaling
-                    rooms[roomId].host.on('message', (msg) => {
-                        rooms[roomId].guest.send(msg.toString());
-                    });
-                    ws.on('message', (msg) => {
-                        rooms[roomId].host.send(msg.toString());
-                    });
+                    joinRoom(roomId, ws);
                 } else {
                     ws.send(JSON.stringify({ type: 'error', message: `Room ${roomId} is full or does not exist` }));
                 }
                 break;
-            }            
+            }
+            case 'join_or_create_room': {
+                const roomId = data.roomId;
+                joinOrCreateRoom(roomId, ws);
+                break;
+            }
         }
     });
 
@@ -90,3 +81,34 @@ wss.on('connection', (ws) => {
 server.listen(8080, () => {
     console.log('Server is running on http://localhost:8080');
 });
+
+function joinOrCreateRoom(roomId, ws){
+    if (rooms[roomId]){
+        joinRoom(roomId, ws);
+    } else {
+        createRoom(roomId, ws);
+    }
+}
+
+function joinRoom(roomId, ws) {
+    rooms[roomId].guest = ws;
+
+    console.log(`room ${roomId} joined`);
+    // Notify both players
+    rooms[roomId].host.send(JSON.stringify({ type: 'player_joined' }));
+    ws.send(JSON.stringify({ type: 'room_joined', roomId }));
+    // Relay messages for signaling
+    rooms[roomId].host.on('message', (msg) => {
+        rooms[roomId].guest.send(msg.toString());
+    });
+    ws.on('message', (msg) => {
+        rooms[roomId].host.send(msg.toString());
+    });
+}
+
+function createRoom(roomId, ws) {
+    rooms[roomId] = { host: ws, guest: null };
+    console.log(`room ${roomId} created`);
+    ws.send(JSON.stringify({ type: 'room_created', roomId }));
+}
+

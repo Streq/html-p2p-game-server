@@ -1,6 +1,14 @@
 // client.js
 const serverUrl = `ws://${window.location.host}`;
 const serverSocket = new WebSocket(serverUrl);
+
+serverSocket.onopen = (ev) =>{
+    let path = window.location.pathname;
+    if (path.startsWith("/game/")){
+        let roomId = path.substring("/game/".length)
+        serverSocket.send(JSON.stringify({type: 'join_or_create_room', roomId}))
+    }    
+}
 let localConnection, dataChannel;
 
 // DOM elements
@@ -52,6 +60,7 @@ serverSocket.onmessage = async (event) => {
         switch (data.type) {
             case 'room_created':
                 lobbyStatus.textContent = `Room ${data.roomId} created. Waiting for a player to join...`;
+                amHost = true;
                 break;
             case 'room_joined':
                 lobbyStatus.textContent = `Joined room ${data.roomId}. Starting game...`;
@@ -60,7 +69,6 @@ serverSocket.onmessage = async (event) => {
                 break;
             case 'player_joined':
                 lobbyStatus.textContent = `A player has joined your room. Starting game...`;
-                amHost = true;
                 startGame();
                 break;
             case 'error':
