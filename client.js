@@ -1,5 +1,6 @@
 // client.js
-const serverUrl = `ws://${window.location.host}`;
+const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+const serverUrl = `${protocol}://${window.location.host}`;
 const serverSocket = new WebSocket(serverUrl);
 
 serverSocket.onopen = (ev) =>{
