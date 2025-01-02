@@ -1,5 +1,5 @@
 // client.js
-const serverUrl = `ws://${window.location.host}`;
+const serverUrl = `wss://${window.location.host}`;
 const serverSocket = new WebSocket(serverUrl);
 
 serverSocket.onopen = (ev) =>{
