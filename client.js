@@ -4,8 +4,8 @@ const serverSocket = new WebSocket(serverUrl);
 
 serverSocket.onopen = (ev) =>{
     let path = window.location.pathname;
-    if (path.startsWith("/game/")){
-        let roomId = path.substring("/game/".length)
+    if (path.startsWith("/game/room/")){
+        let roomId = path.substring("/game/room/".length)
         serverSocket.send(JSON.stringify({type: 'join_or_create_room', roomId}))
     }    
 }

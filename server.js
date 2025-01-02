@@ -5,7 +5,7 @@ const fs = require('fs');
 
 // Serve the client files
 const server = http.createServer((req, res) => {
-    if (req.url === '/' || req.url.startsWith("/game/")) {
+    if (req.url === '/game/' || req.url.startsWith("/game/room/")) {
         fs.readFile('index.html', (err, data) => {
             if (err) {
                 res.writeHead(500);
@@ -15,7 +15,7 @@ const server = http.createServer((req, res) => {
                 res.end(data);
             }
         });
-    } else if (req.url === '/client.js') {
+    } else if (req.url === '/game/client.js') {
         fs.readFile('client.js', (err, data) => {
             if (err) {
                 res.writeHead(500);
